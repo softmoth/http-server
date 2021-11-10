@@ -120,6 +120,16 @@ impl<'a> FileServer {
         };
     }
 
+    /// Creates a file in the provided `req_path` with the provided `content`
+    pub async fn create(&self, req_path: String, content: Vec<u8>) -> Result<Response<Body>> {
+        println!("{:?}\t{:?}", req_path, content);
+
+        Ok(HttpResponseBuilder::new()
+            .status(StatusCode::METHOD_NOT_ALLOWED)
+            .body(Body::from(req_path.to_string()))
+            .expect("Failed to build response"))
+    }
+
     /// Indexes the directory by creating a `DirectoryIndex`. Such `DirectoryIndex`
     /// is used to build the Handlebars "Explorer" template using the Handlebars
     /// engine and builds an HTTP Response containing such file
