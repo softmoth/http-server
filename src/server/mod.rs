@@ -27,7 +27,7 @@ impl Server {
     pub async fn run(self) {
         let config = Arc::clone(&self.config);
         let address = config.address();
-        let handler = handler::HttpHandler::from(Arc::clone(&config));
+        let handler = handler::HttpHandler::new(Arc::clone(&config)).await;
         let server = Arc::new(self);
         let mut server_instances: Vec<tokio::task::JoinHandle<()>> = Vec::new();
 

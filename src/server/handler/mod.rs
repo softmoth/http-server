@@ -1,3 +1,4 @@
+mod dev_server;
 mod file_server;
 mod proxy;
 
@@ -9,12 +10,14 @@ use std::convert::TryFrom;
 use std::sync::Arc;
 use tokio::sync::Mutex;
 
+use crate::addon::dev_server::DevServer;
 use crate::addon::file_server::FileServer;
 use crate::addon::proxy::Proxy;
 use crate::Config;
 
 use super::middleware::Middleware;
 
+use self::dev_server::DevServerHandler;
 use self::file_server::FileServerHandler;
 use self::proxy::ProxyHandler;
 
@@ -32,31 +35,31 @@ pub struct HttpHandler {
 }
 
 impl HttpHandler {
-    pub async fn handle_request(self, request: Request<Body>) -> Result<Response<Body>> {
-        let handler = Arc::clone(&self.request_handler);
-        let middleware = Arc::clone(&self.middleware);
-        let response = middleware.handle(request, handler).await;
+    pub async fn new(config: Arc<Config>) -> Self {
+        // if let Some(proxy_config) = config.proxy() {
+        //     let proxy = Proxy::new(&proxy_config.url);
+        //     let request_handler = Arc::new(ProxyHandler::new(proxy));
+        //     let middleware = Middleware::try_from(config).unwrap();
+        //     let middleware = Arc::new(middleware);
 
-        Ok(response)
-    }
-}
+        //     return HttpHandler {
+        //         request_handler,
+        //         middleware,
+        //     };
+        // }
 
-impl From<Arc<Config>> for HttpHandler {
-    fn from(config: Arc<Config>) -> Self {
-        if let Some(proxy_config) = config.proxy() {
-            let proxy = Proxy::new(&proxy_config.url);
-            let request_handler = Arc::new(ProxyHandler::new(proxy));
-            let middleware = Middleware::try_from(config).unwrap();
-            let middleware = Arc::new(middleware);
+        // let file_server = FileServer::new(config.root_dir());
+        // let request_handler = Arc::new(FileServerHandler::new(file_server));
+        // let middleware = Middleware::try_from(config).unwrap();
+        // let middleware = Arc::new(middleware);
 
-            return HttpHandler {
-                request_handler,
-                middleware,
-            };
-        }
+        // HttpHandler {
+        //     request_handler,
+        //     middleware,
+        // }
 
-        let file_server = FileServer::new(config.root_dir());
-        let request_handler = Arc::new(FileServerHandler::new(file_server));
+        let dev_server = DevServer::new(config.root_dir()).await;
+        let request_handler = Arc::new(DevServerHandler::new(dev_server));
         let middleware = Middleware::try_from(config).unwrap();
         let middleware = Arc::new(middleware);
 
@@ -64,5 +67,13 @@ impl From<Arc<Config>> for HttpHandler {
             request_handler,
             middleware,
         }
+    }
+
+    pub async fn handle_request(self, request: Request<Body>) -> Result<Response<Body>> {
+        let handler = Arc::clone(&self.request_handler);
+        let middleware = Arc::clone(&self.middleware);
+        let response = middleware.handle(request, handler).await;
+
+        Ok(response)
     }
 }
