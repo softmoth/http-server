@@ -5,7 +5,7 @@ use std::time::Duration;
 use tokio::sync::broadcast::{self, Sender};
 
 pub struct DevServer {
-    kill_tx: Sender<()>,
+    pub kill_tx: Sender<()>,
 }
 
 impl DevServer {
