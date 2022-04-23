@@ -1,3 +1,4 @@
+use http::StatusCode;
 use http::header::USER_AGENT;
 use http::header::{HeaderName, HeaderValue};
 use hyper::client::HttpConnector;
@@ -27,6 +28,7 @@ impl Proxy {
         self.add_via_header(Arc::clone(&request)).await;
 
         let mut outogoing = self.map_incoming_request(Arc::clone(&request)).await;
+        let out_uri = outogoing.uri().clone();
         let outgoing_headers = outogoing.headers_mut();
 
         // Host must be the authority from the proxied URL
@@ -40,6 +42,13 @@ impl Proxy {
         let response = tokio::spawn(async move { client.request(outogoing).await.unwrap() })
             .await
             .unwrap();
+
+        if response.status().is_redirection() {
+            // The HTTP 304 Not Modified client redirection response code
+            // indicates that there is no need to retransmit the requested
+            // resources.
+            println!("{} -> {}", out_uri.to_string(), response.status());
+        }
 
         response
     }
