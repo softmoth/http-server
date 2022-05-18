@@ -8,6 +8,7 @@ use http::{Request, Response};
 use hyper::Body;
 use std::convert::TryFrom;
 use std::sync::Arc;
+use tokio::task::JoinHandle;
 use tokio::sync::broadcast::Sender;
 use tokio::sync::Mutex;
 
@@ -33,7 +34,6 @@ pub trait RequestHandler {
 pub struct HttpHandler {
     request_handler: Arc<dyn RequestHandler + Send + Sync>,
     middleware: Arc<Middleware>,
-    kill_tx: Sender<()>,
 }
 
 impl HttpHandler {
@@ -59,9 +59,9 @@ impl HttpHandler {
         //     request_handler,
         //     middleware,
         // }
-
+        println!("Creates handler");
         let dev_server = DevServer::new(config.root_dir()).await;
-        let kill_tx = dev_server.kill_tx.clone();
+                println!("Creates handler");
         let request_handler = Arc::new(DevServerHandler::new(dev_server));
         let middleware = Middleware::try_from(config).unwrap();
         let middleware = Arc::new(middleware);
@@ -69,19 +69,15 @@ impl HttpHandler {
         HttpHandler {
             request_handler,
             middleware,
-            kill_tx,
         }
     }
 
     pub async fn handle_request(self, request: Request<Body>) -> Result<Response<Body>> {
+        println!("handles requests");
         let handler = Arc::clone(&self.request_handler);
         let middleware = Arc::clone(&self.middleware);
         let response = middleware.handle(request, handler).await;
 
         Ok(response)
-    }
-
-    pub fn kill_tx(&self) -> Sender<()> {
-        self.kill_tx.clone()
     }
 }
