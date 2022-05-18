@@ -62,7 +62,7 @@ impl Server {
     }
 
     pub async fn serve(&self, address: SocketAddr, handler: handler::HttpHandler) {
-        let server = hyper::Server::bind(&address).serve(make_service_fn(|_| {
+        let mut server = hyper::Server::bind(&address).serve(make_service_fn(|_| {
             // Move a clone of `handler` into the `service_fn`.
             let handler = handler.clone();
 
@@ -73,8 +73,10 @@ impl Server {
             }
         }));
 
-        let server_with_graceful_shutdown =
-            server.with_graceful_shutdown(crate::utils::signal::shutdown_signal());
+        if self.config.graceful_shutdown() {
+            let server =
+                server.with_graceful_shutdown(crate::utils::signal::shutdown_signal());
+        }
 
         if self.config.verbose() {
             println!("Serving HTTP: http://{}", address);
