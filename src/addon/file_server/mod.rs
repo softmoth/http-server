@@ -11,10 +11,13 @@ use handlebars::Handlebars;
 use http::response::Builder as HttpResponseBuilder;
 use http::{StatusCode, Uri};
 use hyper::{Body, Response};
+use notify::{watcher, DebouncedEvent, FsEventWatcher, Watcher};
 use std::fs::read_dir;
 use std::path::{Path, PathBuf};
 use std::str::FromStr;
+use std::sync::mpsc::{channel, Receiver};
 use std::sync::Arc;
+use std::time::Duration;
 
 use crate::utils::fmt::{format_bytes, format_system_date};
 
@@ -24,10 +27,35 @@ use self::http_utils::{make_http_file_response, CacheControlDirective};
 /// Explorer's Handlebars template filename
 const EXPLORER_TEMPLATE: &str = "explorer";
 
+pub struct DevServer {
+    pub root_dir: PathBuf,
+    pub rx: Arc<Receiver<DebouncedEvent>>,
+    pub watcher: FsEventWatcher,
+}
+
+impl DevServer {
+    pub fn new(root_dir: PathBuf) -> Self {
+        let (tx, rx) = channel();
+        let delay = Duration::from_millis(100);
+        let mut watcher = watcher(tx, delay).unwrap();
+
+        if let Err(err) = watcher.watch(&root_dir, notify::RecursiveMode::Recursive) {
+            eprintln!("DevServerError: {}", err);
+        }
+
+        Self {
+            root_dir,
+            rx: Arc::new(rx),
+            watcher,
+        }
+    }
+}
+
 pub struct FileServer {
     root_dir: PathBuf,
     handlebars: Arc<Handlebars<'static>>,
     scoped_file_system: ScopedFileSystem,
+    dev_server: Option<Arc<DevServer>>,
 }
 
 impl<'a> FileServer {
@@ -40,7 +68,30 @@ impl<'a> FileServer {
             root_dir,
             handlebars,
             scoped_file_system,
+            dev_server: None,
         }
+    }
+
+    pub fn new_dev_server(root_dir: PathBuf) -> Self {
+        let mut file_server = Self::new(root_dir);
+        let dev_server = DevServer::new(root_dir);
+        let dev_server = Arc::new(dev_server);
+
+        file_server.dev_server = Some(dev_server);
+
+        file_server
+    }
+
+    pub fn watch(self) {
+        if let Some(dev_server) = self.dev_server {
+            loop {
+                let recv = dev_server.rx.recv();
+
+                println!("{:?}", recv);
+            }
+        }
+
+        panic!("No dev server configured for this instance");
     }
 
     /// Creates a new `Handlebars` instance with templates registered

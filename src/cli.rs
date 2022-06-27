@@ -60,6 +60,9 @@ pub struct Cli {
     /// Waits for all requests to fulfill before shutting down the server
     #[structopt(long = "graceful-shutdown")]
     pub graceful_shutdown: bool,
+    /// Enables a web development server with live reloading
+    #[structopt(long = "dev")]
+    pub dev: bool,
 }
 
 impl Cli {
@@ -87,6 +90,7 @@ impl Default for Cli {
             logger: false,
             proxy: None,
             graceful_shutdown: false,
+            dev: false,
         }
     }
 }

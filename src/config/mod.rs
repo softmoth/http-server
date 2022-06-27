@@ -35,6 +35,7 @@ pub struct Config {
     logger: Option<bool>,
     proxy: Option<ProxyConfig>,
     graceful_shutdown: bool,
+    dev: bool,
 }
 
 impl Config {
@@ -85,6 +86,10 @@ impl Config {
     pub fn graceful_shutdown(&self) -> bool {
         self.graceful_shutdown
     }
+
+    pub fn dev(&self) -> bool {
+        self.dev
+    }
 }
 
 impl Default for Config {
@@ -107,6 +112,7 @@ impl Default for Config {
             logger: None,
             proxy: None,
             graceful_shutdown: false,
+            dev: false,
         }
     }
 }
@@ -189,6 +195,7 @@ impl TryFrom<Cli> for Config {
             logger,
             proxy,
             graceful_shutdown: cli_arguments.graceful_shutdown,
+            dev: cli_arguments.dev,
         })
     }
 }
@@ -222,6 +229,7 @@ impl TryFrom<ConfigFile> for Config {
             logger: file.logger,
             proxy: file.proxy,
             graceful_shutdown: file.graceful_shutdown.unwrap_or(false),
+            dev: file.dev.unwrap_or(false),
         })
     }
 }

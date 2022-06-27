@@ -26,6 +26,7 @@ pub struct ConfigFile {
     pub logger: Option<bool>,
     pub proxy: Option<ProxyConfig>,
     pub graceful_shutdown: Option<bool>,
+    pub dev: Option<bool>,
 }
 
 impl ConfigFile {
